@@ -71,3 +71,77 @@ class MLP:
     def parameters(self) -> list[np.ndarray]:
         return self.weights + self.biases
 
+class SkillSelectorPolicy:
+    """
+    Actor-Critic policy for skill selection.
+    
+    Architecture:
+    - Shared encoder: processes task + skill embeddings
+    - Actor head: outputs skill selection probabilities
+    - Critic head: estimates state value
+    
+    Training: PPO with GAE
+    """
+    
+    def __init__(
+        self,
+        embedding_dim: int = 384,
+        hidden_dim: int = 256,
+        max_skills: int = 5,
+        gamma: float = 0.99,
+        gae_lambda: float = 0.95,
+        clip_epsilon: float = 0.2,
+        entropy_coef: float = 0.01,
+        value_coef: float = 0.5,
+    ):
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+        self.max_skills = max_skills
+        
+        # PPO hyperparameters
+        self.gamma = gamma
+        self.gae_lambda = gae_lambda
+        self.clip_epsilon = clip_epsilon
+        self.entropy_coef = entropy_coef
+        self.value_coef = value_coef
+        
+        # Networks
+        self.task_encoder = MLP([embedding_dim, hidden_dim, hidden_dim])
+        self.skill_encoder = MLP([embedding_dim, hidden_dim, hidden_dim])
+        self.attention = MLP([hidden_dim * 2, hidden_dim, 1])
+        self.value_head = MLP([hidden_dim, hidden_dim // 2, 1])
+        
+        # Experience buffer
+        self.experiences: list[Experience] = []
+        
+        # Training stats
+        self.training_step = 0
+        self.metrics_history: list[dict] = []
+    
+    def encode_task(self, task_embedding: np.ndarray) -> np.ndarray:
+        return self.task_encoder.forward(task_embedding)
+    
+    def encode_skill(self, skill_embedding: np.ndarray) -> np.ndarray:
+        return self.skill_encoder.forward(skill_embedding)
+    
+    def compute_skill_scores(
+        self,
+        task_hidden: np.ndarray,
+        skills: list[SkillMetadata],
+    ) -> tuple[np.ndarray, list[np.ndarray]]:
+        scores = []
+        skill_hiddens = []
+        
+        for skill in skills:
+            if skill.embedding is not None:
+                skill_hidden = self.encode_skill(skill.embedding)
+            else:
+                skill_hidden = np.zeros(self.hidden_dim)
+            
+            skill_hiddens.append(skill_hidden)
+            combined = np.concatenate([task_hidden, skill_hidden])
+            score = self.attention.forward(combined)[0]
+            score += skill.success_rate * 0.3
+            scores.append(score)
+        
+        return np.array(scores), skill_hiddens
