@@ -145,3 +145,43 @@ class SkillSelectorPolicy:
             scores.append(score)
         
         return np.array(scores), skill_hiddens
+
+    def select(
+        self,
+        state: SelectionState,
+        temperature: float = 1.0,
+        deterministic: bool = False,
+    ) -> SelectionAction:
+        if not state.available_skills:
+            return SelectionAction([], [], [])
+        
+        task_hidden = self.encode_task(state.task_embedding)
+        scores, _ = self.compute_skill_scores(task_hidden, state.available_skills)
+        probs = softmax(scores, temperature)
+        
+        selected_ids = []
+        confidence_scores = []
+        log_probs = []
+        remaining_budget = state.context_budget
+        
+        if deterministic:
+            indices = np.argsort(probs)[::-1]
+        else:
+            indices = np.random.choice(
+                len(probs), size=len(probs), replace=False, p=probs
+            )
+        
+        for idx in indices:
+            if len(selected_ids) >= self.max_skills:
+                break
+            
+            skill = state.available_skills[idx]
+            if skill.token_count > remaining_budget:
+                continue
+            
+            selected_ids.append(skill.id)
+            confidence_scores.append(float(probs[idx]))
+            log_probs.append(float(np.log(probs[idx] + 1e-10)))
+            remaining_budget -= skill.token_count
+        
+        return SelectionAction(selected_ids, confidence_scores, log_probs)
