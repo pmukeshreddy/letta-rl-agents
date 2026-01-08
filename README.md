@@ -155,10 +155,4 @@ make down       # Docker compose down
 | Quality Tracking | None | **Success rates** |
 | Multi-Agent | Skills stuck | **Shared repository** |
 
-## License
 
-MIT
-
-## Author
-
-Built by [Mukesh Reddy](https://github.com/pmukeshreddy) — targeting Letta's founding engineering team 🚀
