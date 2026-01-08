@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - LETTA_API_KEY=${LETTA_API_KEY}
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/letta_rl
+      - SKILLS_DIR=/app/skills
+    volumes:
+      - ./skills:/app/skills
+    depends_on:
+      - db
+    command: uvicorn src.api.server:app --host 0.0.0.0 --port 8000
+
+  ui:
+    build: .
+    ports:
+      - "7860:7860"
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    command: python ui/dashboard.py
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=letta_rl
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:

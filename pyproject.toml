@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "letta-rl-selector"
+version = "0.1.0"
+description = "RL-optimized skill selection for Letta agents"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Mukesh Reddy", email = "mukeshreddy662369@gmail.com"}
+]
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "gradio>=4.0.0",
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "numpy>=1.24.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.25.0",
+    "python-dotenv>=1.0.0",
+    "pandas>=2.0.0",
+    "tiktoken>=0.5.0",
+]
+
+[project.optional-dependencies]
+letta = [
+    "letta-client>=0.1.0",
+]
+embeddings = [
+    "sentence-transformers>=2.2.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+all = [
+    "letta-rl-selector[letta,embeddings,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/pmukeshreddy/letta-rl-agents"
+Repository = "https://github.com/pmukeshreddy/letta-rl-agents"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I"]
+ignore = ["E501"]
