@@ -37,7 +37,7 @@ from sqlalchemy.orm import (
     relationship,
     Session,
 )
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy import JSON, ARRAY
 
 Base = declarative_base()
 
@@ -72,7 +72,7 @@ class Skill(Base):
     
     # Metadata
     category = Column(String(64))  # e.g., "file-ops", "api", "data"
-    tags = Column(JSONB, default=[])
+    tags = Column(JSON, default=[])
     token_count = Column(Integer, default=0)  # For context budget planning
     
     # Denormalized stats (updated periodically for fast queries)
@@ -142,10 +142,10 @@ class SkillStats(Base):
     reward_variance = Column(Float, default=0.0)
     
     # Performance by task type (JSON: {"coding": {"uses": 10, "success": 8}})
-    task_type_stats = Column(JSONB, default={})
+    task_type_stats = Column(JSON, default={})
     
     # Co-occurrence with other skills
-    co_occurrence_stats = Column(JSONB, default={})  # {"other_skill_id": {"count": 5, "success": 4}}
+    co_occurrence_stats = Column(JSON, default={})  # {"other_skill_id": {"count": 5, "success": 4}}
     
     # Time-based tracking
     last_used_at = Column(DateTime, nullable=True)
@@ -195,9 +195,9 @@ class TaskOutcome(Base):
     task_embedding = Column(LargeBinary)  # For similarity analysis
     
     # Skill selection
-    skills_available = Column(JSONB, default=[])  # All skills that were available
+    skills_available = Column(JSON, default=[])  # All skills that were available
     selection_method = Column(String(32), default="rl")  # "rl", "random", "manual", "baseline"
-    selection_confidence = Column(JSONB, default={})  # {"skill_id": 0.85, ...}
+    selection_confidence = Column(JSON, default={})  # {"skill_id": 0.85, ...}
     
     # Execution context
     agent_id = Column(String(255))
@@ -207,7 +207,7 @@ class TaskOutcome(Base):
     # Outcome
     success = Column(Boolean, nullable=False)
     reward = Column(Float, default=0.0)
-    reward_components = Column(JSONB, default={})  # {"task_success": 1.0, "efficiency": 0.2}
+    reward_components = Column(JSON, default={})  # {"task_success": 1.0, "efficiency": 0.2}
     
     # Response data
     response = Column(Text)
@@ -224,7 +224,7 @@ class TaskOutcome(Base):
     feedback_at = Column(DateTime, nullable=True)
     
     # Additional metadata
-    metadata = Column(JSONB, default={})
+    task_metadata = Column(JSON, default={})
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -279,18 +279,18 @@ class Experience(Base):
     
     # State representation
     state_task_embedding = Column(LargeBinary)  # Task embedding
-    state_available_skills = Column(JSONB)  # List of available skill IDs
-    state_skill_qualities = Column(JSONB)  # {"skill_id": quality_score} at decision time
+    state_available_skills = Column(JSON)  # List of available skill IDs
+    state_skill_qualities = Column(JSON)  # {"skill_id": quality_score} at decision time
     state_context_budget = Column(Integer)  # Available tokens for skills
     
     # Action taken
-    action_selected_skills = Column(JSONB)  # Ordered list of selected skill IDs
-    action_probabilities = Column(JSONB)  # {"skill_id": selection_probability}
-    action_log_probs = Column(JSONB)  # {"skill_id": log_prob} for PPO
+    action_selected_skills = Column(JSON)  # Ordered list of selected skill IDs
+    action_probabilities = Column(JSON)  # {"skill_id": selection_probability}
+    action_log_probs = Column(JSON)  # {"skill_id": log_prob} for PPO
     
     # Reward
     reward = Column(Float, nullable=False)
-    reward_components = Column(JSONB, default={})
+    reward_components = Column(JSON, default={})
     
     # Value estimation (for advantage calculation)
     value_estimate = Column(Float, nullable=True)  # V(s) from critic
@@ -341,7 +341,7 @@ class Policy(Base):
     weights = Column(LargeBinary, nullable=False)
     
     # Architecture config (for reconstruction)
-    config = Column(JSONB, nullable=False, default={
+    config = Column(JSON, nullable=False, default={
         "embedding_dim": 384,
         "hidden_dim": 256,
         "max_skills": 5,
@@ -403,7 +403,7 @@ class TrainingRun(Base):
     policy_version_end = Column(Integer, nullable=True)
     
     # Hyperparameters
-    config = Column(JSONB, default={})
+    config = Column(JSON, default={})
     learning_rate = Column(Float, default=3e-4)
     batch_size = Column(Integer, default=64)
     epochs = Column(Integer, default=10)

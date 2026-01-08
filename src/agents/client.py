@@ -23,8 +23,8 @@ class LettaClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.letta.ai",
-        default_model: str = "gpt-4o-mini",
+        base_url: str = "https://api.letta.com",
+        default_model: str = "openai/gpt-4o-mini",
     ):
         self.api_key = api_key or os.getenv("LETTA_API_KEY")
         self.base_url = base_url.rstrip("/")
@@ -37,8 +37,8 @@ class LettaClient:
         """Lazy init Letta client."""
         if self._client is None:
             try:
-                from letta import Letta
-                self._client = Letta(api_key=self.api_key, base_url=self.base_url)
+                from letta_client import Letta
+                self._client = Letta(api_key=self.api_key)
             except ImportError:
                 raise ImportError("letta package not installed. Run: pip install letta")
         return self._client
@@ -59,7 +59,11 @@ class LettaClient:
         agent = client.agents.create(
             name=name,
             model=model or self.default_model,
-            system_prompt=system_prompt or "You are a helpful AI assistant.",
+            embedding="openai/text-embedding-3-small",
+            memory_blocks=[
+                {"label": "persona", "value": system_prompt or "You are a helpful AI assistant."},
+                {"label": "human", "value": "User wants help with tasks."},
+            ],
         )
         
         self._agents[name] = agent.id
@@ -148,28 +152,27 @@ class LettaClient:
             # Send message to agent
             response = client.agents.messages.create(
                 agent_id=agent_id,
-                messages=[{"role": "user", "content": full_message}],
+                input=full_message,
             )
             
-            # Parse response
-            assistant_messages = [
-                m for m in response.messages 
-                if m.role == "assistant"
-            ]
-            
+            # Parse response - look for AssistantMessage type
             response_text = ""
-            if assistant_messages:
-                response_text = assistant_messages[-1].content
+            for m in response.messages:
+                # Check for AssistantMessage (has message_type or content attr)
+                msg_type = getattr(m, 'message_type', None)
+                if msg_type == 'assistant_message' or type(m).__name__ == 'AssistantMessage':
+                    response_text = getattr(m, 'content', str(m))
+                    break
             
             # Estimate tokens (rough)
             tokens_used = len(full_message.split()) + len(response_text.split())
             
             return {
-                "success": True,
+                "success": bool(response_text),  # Success if we got a response
                 "response": response_text,
-                "error": None,
+                "error": None if response_text else "No assistant response found",
                 "tokens_used": tokens_used * 2,  # Rough token estimate
-                "messages": [{"role": m.role, "content": m.content} for m in response.messages],
+                "messages": [{"type": type(m).__name__, "content": getattr(m, 'content', str(m))} for m in response.messages],
             }
             
         except Exception as e:
